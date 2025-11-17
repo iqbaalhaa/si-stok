@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: si-stok
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_NAME
+        value: si-stok
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_URL
+        value: https://si-stok.onrender.com
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: si-stok
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: si-stok
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: si-stok
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: si-stok
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: si-stok
+          property: password
+databases:
+  - name: si-stok
+    plan: free
