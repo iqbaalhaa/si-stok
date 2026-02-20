@@ -22,6 +22,7 @@ class HargaMotorResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
     protected static ?string $navigationGroup = 'Data Master';
     protected static ?string $pluralLabel = 'Harga Motor';
+    protected static ?int $navigationSort = 2;
 
     public static function shouldRegisterNavigation(): bool
     {

@@ -17,6 +17,7 @@ use App\Filament\Widgets\MotorStockPieChart;
 use App\Filament\Widgets\InventoryStatsOverview;
 use Filament\Notifications\Notification;
 use App\Models\SystemSetting;
+use App\Models\Motor;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 use Filament\View\PanelsRenderHook;
@@ -43,17 +44,17 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login(\App\Filament\Pages\Auth\Login::class)
             ->brandName(fn () => SystemSetting::query()->value('nama_sistem') ?? config('app.name'))
-            ->brandLogo(fn () => ($logo = SystemSetting::query()->value('logo')) ? asset(Storage::url($logo)) : null)
+            ->brandLogo(fn () => ($logo = SystemSetting::query()->value('logo')) ? asset(Storage::disk('public')->url($logo)) : null)
             ->brandLogoHeight('6rem')
-            ->darkModeBrandLogo(fn () => ($logo = SystemSetting::query()->value('logo')) ? asset(Storage::url($logo)) : null)
-            ->favicon(fn () => ($fav = SystemSetting::query()->value('favicon')) ? asset(Storage::url($fav)) : null)
+            ->darkModeBrandLogo(fn () => ($logo = SystemSetting::query()->value('logo')) ? asset(Storage::disk('public')->url($logo)) : null)
+            ->favicon(fn () => ($fav = SystemSetting::query()->value('favicon')) ? asset(Storage::disk('public')->url($fav)) : null)
             ->renderHook(PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE, function () {
                 $customUrl = env('FILAMENT_LOGIN_LOGO_URL');
                 $loginLogo = $customUrl ?: SystemSetting::query()->value('login_logo');
-                $src = $loginLogo ? (str_starts_with($loginLogo, 'http') ? $loginLogo : asset(Storage::url($loginLogo))) : null;
+                $src = $loginLogo ? (str_starts_with($loginLogo, 'http') ? $loginLogo : asset(Storage::disk('public')->url($loginLogo))) : null;
                 if (! $src) {
                     $fallback = SystemSetting::query()->value('logo');
-                    $src = $fallback ? asset(Storage::url($fallback)) : null;
+                    $src = $fallback ? asset(Storage::disk('public')->url($fallback)) : null;
                 }
                 if (! $src) {
                     return '';
@@ -116,6 +117,67 @@ class AdminPanelProvider extends PanelProvider
                     ->visible(fn (): bool => auth()->user()?->role === 'kepala'),
             ])
             ->bootUsing(function () {
+                try {
+                    $fs = app('files');
+                    $uploadsRoot = public_path('uploads');
+                    if (! is_dir($uploadsRoot)) {
+                        $fs->makeDirectory($uploadsRoot, 0755, true);
+                    }
+                    foreach (['system/logo', 'system/login-logo', 'system/favicon', 'motor'] as $dir) {
+                        $dest = public_path('uploads/' . $dir);
+                        $src = storage_path('app/public/' . $dir);
+                        if (! is_dir($dest) && is_dir($src)) {
+                            $fs->makeDirectory($dest, 0755, true);
+                            $fs->copyDirectory($src, $dest);
+                        }
+                    }
+                    $sanitize = function (?string $path): ?string {
+                        if (! $path) return $path;
+                        $p = ltrim($path, '/');
+                        if (str_starts_with($p, 'public/')) {
+                            $p = substr($p, 7);
+                        }
+                        return $p;
+                    };
+                    $ensure = function (?string $rel) use ($fs): void {
+                        if (! $rel) return;
+                        $dest = public_path('uploads/' . ltrim($rel, '/'));
+                        if (is_file($dest)) return;
+                        $dir = dirname($dest);
+                        if (! is_dir($dir)) {
+                            $fs->makeDirectory($dir, 0755, true);
+                        }
+                        $src1 = storage_path('app/public/' . ltrim($rel, '/'));
+                        $src2 = storage_path('app/public/public/' . ltrim($rel, '/'));
+                        if (is_file($src1)) {
+                            $fs->copy($src1, $dest);
+                        } elseif (is_file($src2)) {
+                            $fs->copy($src2, $dest);
+                        }
+                    };
+                    $setting = SystemSetting::query()->first();
+                    if ($setting) {
+                        foreach (['logo', 'login_logo', 'favicon'] as $f) {
+                            $val = $setting->{$f};
+                            $clean = $sanitize($val);
+                            if ($val && $clean !== $val) {
+                                $setting->{$f} = $clean;
+                                $setting->save();
+                            }
+                            $ensure($clean);
+                        }
+                    }
+                    foreach (Motor::query()->whereNotNull('foto')->cursor() as $m) {
+                        $old = $m->foto;
+                        $clean = $sanitize($old);
+                        if ($old && $clean !== $old) {
+                            $m->foto = $clean;
+                            $m->save();
+                        }
+                        $ensure($clean);
+                    }
+                } catch (\Throwable $e) {
+                }
                 if (! auth()->check()) {
                     return;
                 }

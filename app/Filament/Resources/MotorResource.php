@@ -24,6 +24,7 @@ class MotorResource extends Resource
     protected static ?string $modelLabel = 'Motor';
     protected static ?string $pluralModelLabel = 'Motor';
     protected static ?string $navigationLabel = 'Data Motor';
+    protected static ?int $navigationSort = 1;
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -86,6 +87,7 @@ class MotorResource extends Resource
                 FileUpload::make('foto')
                     ->label('Foto Motor')
                     ->directory('motor')
+                    ->disk('public')
                     ->image()
                     ->imageEditor()
                     ->visibility('public')
