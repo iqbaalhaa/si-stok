@@ -30,7 +30,6 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Filament\Resources\MotorResource;
 use App\Filament\Resources\StokMasukResource;
 use App\Filament\Resources\StokKeluarResource;
-use App\Filament\Resources\HargaMotorResource;
 use App\Filament\Resources\StokOpnameResource;
 use App\Filament\Pages\Profile;
 
@@ -104,11 +103,6 @@ class AdminPanelProvider extends PanelProvider
                     ->group('Laporan')
                     ->icon('heroicon-o-arrow-up-tray')
                     ->url(fn (): string => StokKeluarResource::getUrl('index'))
-                    ->visible(fn (): bool => auth()->user()?->role === 'kepala'),
-                NavigationItem::make('Laporan Harga Motor')
-                    ->group('Laporan')
-                    ->icon('heroicon-o-currency-dollar')
-                    ->url(fn (): string => HargaMotorResource::getUrl('index'))
                     ->visible(fn (): bool => auth()->user()?->role === 'kepala'),
                 NavigationItem::make('Laporan Stok Opname')
                     ->group('Laporan')
